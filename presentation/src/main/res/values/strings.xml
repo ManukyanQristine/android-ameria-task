@@ -1,0 +1,16 @@
+<resources>
+    <string name="no_internet_connection">No internet connection</string>
+    <string name="users_list_screen_title">GitHub</string>
+    <string name="user_details_screen_title">Profile</string>
+    <string name="user_item_id_label">Id:%s</string>
+    <string name="user_item_score_label">Score:%s</string>
+    <string name="user_details_followers_label">%d Followers</string>
+    <string name="user_details_following_label">%d Following</string>
+    <string name="user_details_bio_label">Bio:</string>
+    <string name="user_details_public_repo_label">Public Repositories:</string>
+    <string name="user_details_public_gists_label">Public gists:</string>
+    <string name="user_details_updated_at_label">Updated at:</string>
+    <string name="search_users_label">Search users</string>
+    <string name="error_loading_more_users">Error loading more users: %s</string>
+    <string name="error_label">Error</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="divider_thickness">1dp</dimen>
+    <dimen name="padding_extra_small">4dp</dimen>
+    <dimen name="padding_small">8dp</dimen>
+    <dimen name="padding_medium">16dp</dimen>
+    <dimen name="padding_large">24dp</dimen>
+    <dimen name="spacer_height_12">12dp</dimen>
+    <dimen name="spacer_height_24">24dp</dimen>
+    <dimen name="search_bar_height">54dp</dimen>
+    <dimen name="profile_image_small_size">48.dp</dimen>
+    <dimen name="profile_image_size">160dp</dimen>
+    <dimen name="card_levation_6">6dp</dimen>
+    <dimen name="rounded_list_item_shape">16dp</dimen>
+    <dimen name="card_item_shape">8dp</dimen>
+</resources>
