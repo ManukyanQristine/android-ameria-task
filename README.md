@@ -16,6 +16,12 @@ dependency injection, and KSP (Kotlin Symbol Processing) for annotation processi
 - Dependency Injection with Hilt
 - Modular, testable, and scalable codebase
 
+## Screenshots
+
+![Image](https://github.com/user-attachments/assets/6d3fde9c-b7a1-4b25-9091-6971a9d25812)
+
+![Image](https://github.com/user-attachments/assets/4ccee45f-5428-471c-892b-1c69d61cf0f0)
+
 ## Requirements
 
 - Android Studio (latest stable)
