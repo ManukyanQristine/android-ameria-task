@@ -86,6 +86,14 @@ fun UserDetailsScreen(
                 }
 
                 is UserDetailsUiState.Success -> UserDetailsContent(user = state.user)
+
+                is UserDetailsUiState.NoConnection -> {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = noConnectionMessage, duration = SnackbarDuration.Short
+                        )
+                    }
+                }
             }
         }
     }

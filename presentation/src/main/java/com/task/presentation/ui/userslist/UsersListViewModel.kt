@@ -16,8 +16,19 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+
+/**
+ * Represents the UI state for the users list screen.
+ */
+sealed class UsersListUiState {
+    object Idle : UsersListUiState()
+    object Loading : UsersListUiState()
+    data class Error(val message: String) : UsersListUiState()
+}
 
 @HiltViewModel
 class UsersListViewModel @Inject constructor(
@@ -25,6 +36,9 @@ class UsersListViewModel @Inject constructor(
     networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
+    /**
+     * Network connectivity state.
+     */
     val isConnected: StateFlow<Boolean> = networkMonitor.isConnected()
         .stateIn(
             viewModelScope,
@@ -32,27 +46,41 @@ class UsersListViewModel @Inject constructor(
             true
         )
 
-    private val baseUsers = getUsersUseCase()
-        .cachedIn(viewModelScope)
-        .stateIn(viewModelScope, SharingStarted.Lazily, PagingData.empty())
-
+    /**
+     * Search query for filtering users.
+     */
     val searchQuery = MutableStateFlow("")
 
+    private val _uiState = MutableStateFlow<UsersListUiState>(UsersListUiState.Idle)
+    /**
+     * UI state exposed to the UI layer.
+     */
+    val uiState: StateFlow<UsersListUiState> = _uiState
+
+    private val baseUsers = getUsersUseCase()
+        .cachedIn(viewModelScope)
+
+    /**
+     * Users flow for paging, filtered by search query.
+     */
     @OptIn(FlowPreview::class)
     val users = searchQuery
         .debounce(300)
         .combine(baseUsers) { query, pagingData ->
-            val filtered = if (query.isBlank()) {
+            if (query.isBlank()) {
                 pagingData
             } else {
                 pagingData.filter { user ->
-                    user.login.contains(query, ignoreCase = true)
-                            || user.id.toString().contains(query)
+                    user.login.contains(query, ignoreCase = true) ||
+                            user.id.toString().contains(query)
                 }
             }
+        }
+        .map { filtered ->
             filtered.map { it.toUiModel() }
-
+        }
+        .catch { e ->
+            _uiState.value = UsersListUiState.Error(e.message ?: "Unknown error")
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, PagingData.empty())
-
 }

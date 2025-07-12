@@ -10,10 +10,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/**
+ * Represents the UI state for the user details screen.
+ */
+sealed class UserDetailsUiState {
+    object Loading : UserDetailsUiState()
+    object NoConnection : UserDetailsUiState()
+    data class Error(val message: String) : UserDetailsUiState()
+    data class Success(val user: UserDetailsUiModel) : UserDetailsUiState()
+}
 
 @HiltViewModel
 class UserDetailsViewModel @Inject constructor(
@@ -22,45 +31,34 @@ class UserDetailsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UserDetailsUiState>(UserDetailsUiState.Loading)
+    /**
+     * UI state exposed to the UI layer.
+     */
     val uiState: StateFlow<UserDetailsUiState> = _uiState
 
-    private val _username = MutableStateFlow<String?>(null)
+    /**
+     * Network connectivity state.
+     */
     val isConnected = networkMonitor.isConnected()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
-    init {
-        viewModelScope.launch {
-            isConnected.collectLatest { connected ->
-                val username = _username.value
-                if (connected && username != null && uiState.value !is UserDetailsUiState.Success) {
-                    fetchUser(username)
-                }
-            }
-        }
-    }
-
+    /**
+     * Loads user details for the given username. Handles connection and error states.
+     */
     fun loadUser(username: String) {
-        _username.value = username
-        fetchIfConnected(username)
-    }
-
-    private fun fetchIfConnected(username: String) {
         viewModelScope.launch {
-            if (isConnected.value)
-                fetchUser(username)
-            else
+            if (isConnected.value) {
                 _uiState.value = UserDetailsUiState.Loading
+                getUserDetailsUseCase(username)
+                    .catch { e ->
+                        _uiState.value = UserDetailsUiState.Error(e.message ?: "Unknown error")
+                    }
+                    .collect { user ->
+                        _uiState.value = UserDetailsUiState.Success(user.toUiModel())
+                    }
+            } else {
+                _uiState.value = UserDetailsUiState.NoConnection
+            }
         }
-    }
-
-    private suspend fun fetchUser(username: String) {
-        _uiState.value = UserDetailsUiState.Loading
-        getUserDetailsUseCase(username)
-            .catch { e ->
-                _uiState.value = UserDetailsUiState.Error(e.message ?: "Unknown error")
-            }
-            .collectLatest { user ->
-                _uiState.value = UserDetailsUiState.Success(user.toUiModel())
-            }
     }
 }

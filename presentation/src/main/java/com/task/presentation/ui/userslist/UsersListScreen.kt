@@ -43,6 +43,8 @@ fun UsersListScreen(
 ) {
     val users = viewModel.users.collectAsLazyPagingItems()
     val isConnected by viewModel.isConnected.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val noConnectionMessage = stringResource(R.string.no_internet_connection)
@@ -58,12 +60,13 @@ fun UsersListScreen(
         }
     }
 
-    LaunchedEffect(users.loadState.refresh) {
-        if (users.loadState.refresh is LoadState.Error) {
-            val error = (users.loadState.refresh as LoadState.Error).error
+    // Show error snackbar if uiState is Error
+    LaunchedEffect(uiState) {
+        if (uiState is UsersListUiState.Error) {
+            val message = (uiState as UsersListUiState.Error).message
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(
-                    message = error.message.toString(), duration = SnackbarDuration.Short
+                    message = message, duration = SnackbarDuration.Short
                 )
             }
         }
@@ -78,60 +81,70 @@ fun UsersListScreen(
             ) {
                 AppTopBar(title = stringResource(R.string.users_list_screen_title))
                 AppSearchBar(
-                    query = viewModel.searchQuery.collectAsState().value,
+                    query = searchQuery,
                     onQueryChange = { viewModel.searchQuery.value = it }
                 )
             }
         }) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LightGray),
-            contentPadding = paddingValues,
+                .background(LightGray)
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
         ) {
-            items(users.itemCount) { index ->
-                val user = users[index]
-                user?.let { UserListItem(user = it, onClick = { onUserClick(it) }) }
-                if (index < users.itemCount - 1) {
-                    HorizontalDivider(
-                        thickness = dimensionResource(R.dimen.divider_thickness),
-                        color = DividerGray
-                    )
+            when (uiState) {
+                is UsersListUiState.Loading -> {
+                    CircularProgressIndicator()
                 }
-            }
-
-            // Load more indicator
-            when (val state = users.loadState.append) {
-                is LoadState.Loading -> item {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                is UsersListUiState.Error -> {
+                    // Error snackbar is already shown via LaunchedEffect
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.padding(dimensionResource(R.dimen.padding_medium)))
-                    }
-                }
-
-                is LoadState.Error -> item {
-                    val errorMessage =
-                        stringResource(R.string.error_loading_more_users, state.error.message ?: "")
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = errorMessage, duration = SnackbarDuration.Short
-                        )
-                    }
-                }
-
-                else -> {}
-            }
-
-            // Initial loading
-            if (users.loadState.refresh is LoadState.Loading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillParentMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                        items(users.itemCount) { index ->
+                            val user = users[index]
+                            user?.let { UserListItem(user = it, onClick = { onUserClick(it) }) }
+                            if (index < users.itemCount - 1) {
+                                HorizontalDivider(
+                                    thickness = dimensionResource(R.dimen.divider_thickness),
+                                    color = DividerGray
+                                )
+                            }
+                        }
+                        // Load more indicator
+                        when (val appendState = users.loadState.append) {
+                            is LoadState.Loading -> item {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.padding(dimensionResource(R.dimen.padding_medium)))
+                                }
+                            }
+                            is LoadState.Error -> item {
+                                val errorMessage = stringResource(R.string.error_loading_more_users, appendState.error.message ?: "")
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = errorMessage, duration = SnackbarDuration.Short
+                                    )
+                                }
+                            }
+                            else -> {}
+                        }
+                        // Initial loading
+                        if (users.loadState.refresh is LoadState.Loading) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillParentMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
                     }
                 }
             }
